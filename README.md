@@ -8,3 +8,10 @@ rgbe is a RGBE decoder for Go. The RGBE format was invented by Greg Ward for com
 
 Usage
 -----
+
+Tasks
+-----
+
+- [ ] Support encoding
+- [ ] Support additional header information (e.g. Gamma, Exposure)
+- [ ] Write tests

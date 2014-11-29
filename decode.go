@@ -6,7 +6,6 @@ import (
 	"io"
 	"bufio"
 	"math"
-	"errors"
 	"fmt"
 )
 
@@ -32,16 +31,16 @@ func readHeader(r *bufio.Reader) (int, int, error) {
 	line, err := r.ReadString('\n')
 
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, newError(ReadError, err.Error())
 	}
 
 	if line[0] != '#' || line[1] != '?' {
-		return 0, 0, errors.New("Bad initial token")
+		return 0, 0, newError(FormatError, "Bad initial token.")
 	}
 
 	for {
 		if line[0] == 0 || line[0] == '\n' {
-			return 0, 0, errors.New("No FORMAT specifier found")
+			return 0, 0, newError(FormatError, "No FORMAT specifier found.")
 		} else if line == "FORMAT=32-bit_rle_rgbe\n" {
 			break
 		}
@@ -49,29 +48,29 @@ func readHeader(r *bufio.Reader) (int, int, error) {
 		line, err = r.ReadString('\n')
 
 		if err != nil {
-			return 0, 0, err
+			return 0, 0, newError(ReadError, err.Error())
 		}
 	}	
 
 	line, err = r.ReadString('\n')
 
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, newError(ReadError, err.Error())
 	}
 
 	if line[0] != '\n' {
-		errors.New("Missing blank line after FORMAT specifier")
+		return 0, 0, newError(FormatError, "Missing blank line after FORMAT specifier.")
 	}
 
 	line, err = r.ReadString('\n')
 
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, newError(ReadError, err.Error())
 	}
 
 	var width, height int
 	if n, err := fmt.Sscanf(line, "-Y %d +X %d", &height, &width); n < 2 || err != nil {
-		return 0, 0, errors.New("Missing image size specifier")
+		return 0, 0, newError(FormatError, "Missing image size specifier.")
 	}
 
 	return width, height, nil
@@ -90,7 +89,7 @@ func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []flo
 
 	for numScanlines > 0 {
 		if _, err := io.ReadFull(r, rgbe); err != nil {
-			return err
+			return newError(ReadError, err.Error())
 		}
 
 		if rgbe[0] != 2 || rgbe[1] != 2 || (rgbe[2] & 0x80) != 0 {
@@ -101,7 +100,7 @@ func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []flo
 		}
 
 		if int(rgbe[2]) << 8 | int(rgbe[3]) != scanlineWidth {
-			return errors.New("Wrong scanline width")
+			return newError(FormatError, "Wrong scanline width.")
 		}
 
 		// read each of the four channels for the scanline into the buffer 
@@ -111,7 +110,7 @@ func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []flo
 
 			for index < end {
 				if _, err := io.ReadFull(r, buf); err != nil {
-					return err
+					return newError(ReadError, err.Error())
 				}
 
 				if buf[0] > 128 {
@@ -119,7 +118,7 @@ func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []flo
 					count := int(buf[0]) - 128
 
 					if count == 0 || count > end - index {
-						return errors.New("Bad scanline data")
+						return newError(FormatError, "Bad scanline data.")
 					}
 
 					for ; count > 0; count-- {
@@ -131,7 +130,7 @@ func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []flo
 					count := int(buf[0])
 
 					if count == 0 || count > end - index {
-						return errors.New("Bad scanline data")
+						return newError(FormatError, "Bad scanline data.")
 					}
 
 					scanlineBuffer[index] = buf[1]
@@ -140,7 +139,7 @@ func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []flo
 					count--
 					if count > 0 {
 						if _, err := io.ReadFull(r, scanlineBuffer[index:index+count]); err != nil {
-							return err
+							return newError(ReadError, err.Error())
 						}
 
 						index += count
@@ -171,7 +170,7 @@ func readPixels(r *bufio.Reader, offset, numPixels int, data []float32) error {
 
 	for ; numPixels > 0; numPixels-- {
 		if _, err := r.Read(rgbe); err != nil {
-			return err
+			return newError(MemoryError, err.Error())
 		}
 
     	data[offset], data[offset + 1], data[offset + 2] = rgbeToFloat(rgbe[0], rgbe[1], rgbe[2], rgbe[3])
