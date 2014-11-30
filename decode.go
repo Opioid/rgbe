@@ -87,7 +87,7 @@ func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []flo
 	scanlineBuffer := make([]byte, 4 * scanlineWidth)
 	buf := make([]byte, 2)
 
-	for numScanlines > 0 {
+	for ; numScanlines > 0; numScanlines-- {
 		if _, err := io.ReadFull(r, rgbe); err != nil {
 			return newError(ReadError, err.Error())
 		}
@@ -158,8 +158,6 @@ func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []flo
     		data[offset], data[offset + 1], data[offset + 2] = rgbeToFloat(r, g, b, e)
     		offset += 3
     	}
-
-		numScanlines--
 	}
 
 	return nil
