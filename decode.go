@@ -79,7 +79,7 @@ func readHeader(r *bufio.Reader) (int, int, error) {
 func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []float32) error {
 	if scanlineWidth < 8 || scanlineWidth > 0x7fff {
 		// run length encoding is not allowed so read flat
-		return readPixels(r, 0, scanlineWidth * numScanlines, data)
+		return readPixels(r, scanlineWidth * numScanlines, data)
 	} 
 
 	offset := 0
@@ -94,9 +94,9 @@ func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []flo
 
 		if rgbe[0] != 2 || rgbe[1] != 2 || (rgbe[2] & 0x80) != 0 {
 			// this file is not run length encoded
-			data[offset], data[offset + 1], data[offset + 2] = rgbeToFloat(rgbe[0], rgbe[1], rgbe[2], rgbe[3])
+			data[0], data[1], data[2] = rgbeToFloat(rgbe[0], rgbe[1], rgbe[2], rgbe[3])
 
-			return readPixels(r, offset + 3, scanlineWidth * numScanlines - 1, data)
+			return readPixels(r, scanlineWidth * numScanlines - 1, data[3:])
 		}
 
 		if int(rgbe[2]) << 8 | int(rgbe[3]) != scanlineWidth {
@@ -163,11 +163,12 @@ func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []flo
 	return nil
 }
 
-func readPixels(r *bufio.Reader, offset, numPixels int, data []float32) error {
+func readPixels(r *bufio.Reader, numPixels int, data []float32) error {
 	rgbe := make([]byte, 4)
+	offset := 0
 
 	for ; numPixels > 0; numPixels-- {
-		if _, err := r.Read(rgbe); err != nil {
+		if _, err := io.ReadFull(r, rgbe); err != nil {
 			return newError(MemoryError, err.Error())
 		}
 
