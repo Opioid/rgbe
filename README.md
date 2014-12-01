@@ -4,7 +4,7 @@ rgbe
 Description
 -----------
 
-rgbe is a simple RGBE encoding/decoding library for Go. The RGBE format was invented by Greg Ward for compact storage of HDR images (http://radsite.lbl.gov/radiance/refer/Notes/picture_format.html). This library is based on code written by Bruce Walter (http://www.graphics.cornell.edu/~bjw/rgbe/).
+rgbe is a simple RGBE encoding/decoding library for Go. The RGBE format was invented by [Greg Ward](http://radsite.lbl.gov/radiance/refer/Notes/picture_format.html) for compact storage of HDR images . This library is based on code written by [Bruce Walter](http://www.graphics.cornell.edu/~bjw/rgbe/).
 
 Reading of both the RLE-compressed and uncompressed variants is supported. Images are always written with RLE-comression. No additional header information (e.g. gamma and exposure) are read or written.
 
