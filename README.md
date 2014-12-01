@@ -11,7 +11,7 @@ Reading of both the RLE-compressed and uncompressed variants is supported. Image
 Example
 -------
 
-This example reads a RGBE encoded file from disk, computes the average luminance and stores a black and white variant of the image in RGBE format on  disk again.
+This example reads a RGBE encoded image from disk, computes the average luminance and stores a black and white variant of the image in RGBE format on  disk again. Error handling is ommitted for brevity.
 
 ```Go
 package main
@@ -34,10 +34,10 @@ func main() {
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			o := (width * y + x) * 3
-			r, g, b := data[o + 0], data[o + 1], data[o + 2]
+			r, g, b := data[o], data[o + 1], data[o + 2]
 			l := luminance(r, g, b)
 			averageLuminance += l / total
-			data[o + 0], data[o + 1], data[o + 2] = l, l, l
+			data[o], data[o + 1], data[o + 2] = l, l, l
 		}
 	}
 
