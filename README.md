@@ -54,7 +54,7 @@ func main() {
 }
 
 func luminance(r, g, b float32) float32 {
-		return r * 0.299 + g * 0.587 + b * 0.114
+	return r * 0.299 + g * 0.587 + b * 0.114
 }
 ```
 
