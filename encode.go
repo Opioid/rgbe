@@ -1,5 +1,7 @@
 package rgbe
 
+// http://www.graphics.cornell.edu/~bjw/rgbe
+
 import (
 	"io"
 	"bufio"

@@ -68,7 +68,7 @@ func readHeader(r *bufio.Reader) (int, int, error) {
 		return 0, 0, newError(ReadError, err.Error())
 	}
 
-	var width, height int
+	width, height := 0, 0
 	if n, err := fmt.Sscanf(line, "-Y %d +X %d", &height, &width); n < 2 || err != nil {
 		return 0, 0, newError(FormatError, "Missing image size specifier.")
 	}
@@ -138,7 +138,7 @@ func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []flo
 
 					count--
 					if count > 0 {
-						if _, err := io.ReadFull(r, scanlineBuffer[index:index+count]); err != nil {
+						if _, err := io.ReadFull(r, scanlineBuffer[index:index + count]); err != nil {
 							return newError(ReadError, err.Error())
 						}
 
