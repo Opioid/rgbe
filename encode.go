@@ -7,6 +7,10 @@ import (
 	"fmt"
 )
 
+const (
+	minRunLength = 4
+)
+
 func Encode(w io.Writer, width, height int, data []float32) error {
 	bw := bufio.NewWriter(w)
 
@@ -14,8 +18,16 @@ func Encode(w io.Writer, width, height int, data []float32) error {
 		return err
 	}
 
-	if err := writePixels(bw, width * height, data); err != nil {
-		return err
+	useRLE := true
+
+	if useRLE {
+		if err := writePixels(bw, width * height, data); err != nil {
+			return err
+		}
+	} else {
+		if err := writePixels_RLE(bw, width, height, data); err != nil {
+			return err
+		}
 	}
 
 	if err := bw.Flush(); err != nil {
@@ -67,63 +79,119 @@ func writePixels(w *bufio.Writer, numPixels int, data []float32) error {
 	return nil
 }
 
-/*
-int RGBE_WritePixels_RLE(FILE *fp, float *data, int scanline_width,
-			 int num_scanlines)
-{
-  unsigned char rgbe[4];
-  unsigned char *buffer;
-  int i, err;
-
-  if ((scanline_width < 8)||(scanline_width > 0x7fff))
-    // run length encoding is not allowed so write flat
-    return RGBE_WritePixels(fp,data,scanline_width*num_scanlines);
-  buffer = (unsigned char *)malloc(sizeof(unsigned char)*4*scanline_width);
-  if (buffer == NULL) 
-    // no buffer space so write flat 
-    return RGBE_WritePixels(fp,data,scanline_width*num_scanlines);
-  while(num_scanlines-- > 0) {
-    rgbe[0] = 2;
-    rgbe[1] = 2;
-    rgbe[2] = scanline_width >> 8;
-    rgbe[3] = scanline_width & 0xFF;
-    if (fwrite(rgbe, sizeof(rgbe), 1, fp) < 1) {
-      free(buffer);
-      return rgbe_error(rgbe_write_error,NULL);
-    }
-    for(i=0;i<scanline_width;i++) {
-      float2rgbe(rgbe,data[RGBE_DATA_RED],
-		 data[RGBE_DATA_GREEN],data[RGBE_DATA_BLUE]);
-      buffer[i] = rgbe[0];
-      buffer[i+scanline_width] = rgbe[1];
-      buffer[i+2*scanline_width] = rgbe[2];
-      buffer[i+3*scanline_width] = rgbe[3];
-      data += RGBE_DATA_SIZE;
-    }
-    // write out each of the four channels separately run length encoded 
-    // first red, then green, then blue, then exponent 
-    for(i=0;i<4;i++) {
-      if ((err = RGBE_WriteBytes_RLE(fp,&buffer[i*scanline_width],
-				     scanline_width)) != RGBE_RETURN_SUCCESS) {
-	free(buffer);
-	return err;
-      }
-    }
-  }
-  free(buffer);
-  return RGBE_RETURN_SUCCESS;
-}
-*/
-
 func writePixels_RLE(w *bufio.Writer, scanlineWidth, numScanlines int, data []float32) error {
 	if scanlineWidth < 8 || scanlineWidth > 0x7fff {
 		// run length encoding is not allowed so write flat
 		return writePixels(w, scanlineWidth * numScanlines, data)
 	}
 
-	for ; numScanlines > 0; numScanlines-- {
+	index := 0
+	rgbe := make([]byte, 4)
+	scanlineBuffer := make([]byte, 4 * scanlineWidth)
 
+	for ; numScanlines > 0; numScanlines-- {
+		rgbe[0] = 2
+		rgbe[1] = 2
+		rgbe[2] = byte(scanlineWidth >> 8)
+		rgbe[3] = byte(scanlineWidth & 0xFF)
+
+		if _, err := w.Write(rgbe); err != nil {
+			return newError(WriteError, err.Error())
+		}
+
+		for i := 0; i < scanlineWidth; i++ {
+			r := data[index]
+			g := data[index + 1]
+			b := data[index + 2]
+
+			floatToRgbe(r, g, b, rgbe)
+
+			index += 3
+
+			scanlineBuffer[i]                     = rgbe[0]
+			scanlineBuffer[i + scanlineWidth]     = rgbe[1]
+			scanlineBuffer[i + 2 * scanlineWidth] = rgbe[2]
+			scanlineBuffer[i + 3 * scanlineWidth] = rgbe[3]
+		}
+
+		for i := 0; i < 4; i++ {
+			start := i * scanlineWidth
+			if err := writeBytes_RLE(w, scanlineBuffer[start:start + scanlineWidth]); err != nil {
+				return newError(WriteError, err.Error())
+			}
+		}
 	}
+
+	return nil
+}
+
+// The code below is only needed for the run-length encoded files.
+// Run length encoding adds considerable complexity but does
+// save some space.  For each scanline, each channel (r,g,b,e) is
+// encoded separately for better compression.
+func writeBytes_RLE(w *bufio.Writer, data []byte) error {
+	numBytes := len(data)
+	buf := make([]byte, 2)
+	cur := 0
+
+	for cur < numBytes {
+		begRun := cur
+
+		// find next run of length at least 4 if one exists
+    	runCount, oldRunCount := 0, 0
+
+    	for runCount < minRunLength && begRun < numBytes {
+    		begRun += runCount
+    		oldRunCount = runCount
+    		runCount = 1
+
+    		for ; begRun + runCount < numBytes && runCount < 127 && data[begRun] == data[begRun + runCount]; runCount++ {
+    		}
+    	}
+
+    	// if data before next big run is a short run then write it as such
+    	if oldRunCount > 1 && oldRunCount == begRun - cur {
+    		buf[0] = byte(128 + oldRunCount) // write short run
+    		buf[1] = data[cur]
+
+    		if _, err := w.Write(buf); err != nil {
+    			return newError(WriteError, err.Error())
+    		}
+
+    		cur = begRun
+    	}
+
+		// write out bytes until we reach the start of the next run
+		for cur < begRun {
+		    nonRunCount := begRun - cur
+
+		    if nonRunCount > 128 {
+		    	nonRunCount = 128
+		    }
+
+		    if err := w.WriteByte(byte(nonRunCount)); err != nil {
+    			return newError(WriteError, err.Error())
+    		}
+
+    		if _, err := w.Write(data[cur:cur + nonRunCount]); err != nil {
+    			return newError(WriteError, err.Error())
+    		}
+
+    		cur += nonRunCount
+		}
+
+		// write out next run if one was found
+		if runCount >= minRunLength {
+		   	buf[0] = byte(128 + runCount)
+		    buf[1] = data[begRun]
+
+		    if _, err := w.Write(buf); err != nil {
+    			return newError(WriteError, err.Error())
+    		}
+
+		    cur += runCount
+		} 
+    }
 
 	return nil
 }
