@@ -38,28 +38,25 @@ func readHeader(r *bufio.Reader) (int, int, error) {
 		return 0, 0, newError(FormatError, "Bad initial token.")
 	}
 
-	for {
-		if line[0] == 0 || line[0] == '\n' {
-			return 0, 0, newError(FormatError, "No FORMAT specifier found.")
-		} else if line == "FORMAT=32-bit_rle_rgbe\n" {
-			break
-		}
+	formatSpecifier := false
 
+	for {
 		line, err = r.ReadString('\n')
 
 		if err != nil {
 			return 0, 0, newError(ReadError, err.Error())
 		}
+
+		if line[0] == 0 || line[0] == '\n' {
+			// blank lines signifies end of meta data header
+			break
+		} else if line == "FORMAT=32-bit_rle_rgbe\n" {
+			formatSpecifier = true
+		}
 	}	
 
-	line, err = r.ReadString('\n')
-
-	if err != nil {
-		return 0, 0, newError(ReadError, err.Error())
-	}
-
-	if line[0] != '\n' {
-		return 0, 0, newError(FormatError, "Missing blank line after FORMAT specifier.")
+	if !formatSpecifier {
+		return 0, 0, newError(FormatError, "No FORMAT specifier found.")
 	}
 
 	line, err = r.ReadString('\n')
