@@ -148,16 +148,16 @@ func readPixels_RLE(r *bufio.Reader, scanlineWidth, numScanlines int, data []flo
 			}
 		}
 
-    	// now convert data from buffer into floats 
-    	for i := 0; i < scanlineWidth; i++ {
-    		r := scanlineBuffer[i]
-    		g := scanlineBuffer[i +     scanlineWidth]
-    		b := scanlineBuffer[i + 2 * scanlineWidth]
-    		e := scanlineBuffer[i + 3 * scanlineWidth]
+		// now convert data from buffer into floats 
+		for i := 0; i < scanlineWidth; i++ {
+			r := scanlineBuffer[i]
+			g := scanlineBuffer[i +     scanlineWidth]
+			b := scanlineBuffer[i + 2 * scanlineWidth]
+			e := scanlineBuffer[i + 3 * scanlineWidth]
 
-    		data[offset], data[offset + 1], data[offset + 2] = rgbeToFloat(r, g, b, e)
-    		offset += 3
-    	}
+			data[offset], data[offset + 1], data[offset + 2] = rgbeToFloat(r, g, b, e)
+			offset += 3
+		}
 	}
 
 	return nil
@@ -172,8 +172,8 @@ func readPixels(r *bufio.Reader, numPixels int, data []float32) error {
 			return newError(MemoryError, err.Error())
 		}
 
-    	data[offset], data[offset + 1], data[offset + 2] = rgbeToFloat(rgbe[0], rgbe[1], rgbe[2], rgbe[3])
-    	offset += 3
+		data[offset], data[offset + 1], data[offset + 2] = rgbeToFloat(rgbe[0], rgbe[1], rgbe[2], rgbe[3])
+		offset += 3
 	}
 
 	return nil

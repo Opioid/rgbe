@@ -138,60 +138,60 @@ func writeBytes_RLE(w *bufio.Writer, data []byte) error {
 		begRun := cur
 
 		// find next run of length at least 4 if one exists
-    	runCount, oldRunCount := 0, 0
+		runCount, oldRunCount := 0, 0
 
-    	for runCount < minRunLength && begRun < numBytes {
-    		begRun += runCount
-    		oldRunCount = runCount
-    		runCount = 1
+		for runCount < minRunLength && begRun < numBytes {
+			begRun += runCount
+			oldRunCount = runCount
+			runCount = 1
 
-    		for ; begRun + runCount < numBytes && runCount < 127 && data[begRun] == data[begRun + runCount]; runCount++ {
-    		}
-    	}
+			for ; begRun + runCount < numBytes && runCount < 127 && data[begRun] == data[begRun + runCount]; runCount++ {
+			}
+		}
 
-    	// if data before next big run is a short run then write it as such
-    	if oldRunCount > 1 && oldRunCount == begRun - cur {
-    		buf[0] = byte(128 + oldRunCount) // write short run
-    		buf[1] = data[cur]
+		// if data before next big run is a short run then write it as such
+		if oldRunCount > 1 && oldRunCount == begRun - cur {
+			buf[0] = byte(128 + oldRunCount) // write short run
+			buf[1] = data[cur]
 
-    		if _, err := w.Write(buf); err != nil {
-    			return newError(WriteError, err.Error())
-    		}
+			if _, err := w.Write(buf); err != nil {
+				return newError(WriteError, err.Error())
+			}
 
-    		cur = begRun
-    	}
+			cur = begRun
+		}
 
 		// write out bytes until we reach the start of the next run
 		for cur < begRun {
-		    nonRunCount := begRun - cur
+			nonRunCount := begRun - cur
 
-		    if nonRunCount > 128 {
-		    	nonRunCount = 128
-		    }
+			if nonRunCount > 128 {
+				nonRunCount = 128
+			}
 
-		    if err := w.WriteByte(byte(nonRunCount)); err != nil {
-    			return newError(WriteError, err.Error())
-    		}
+			if err := w.WriteByte(byte(nonRunCount)); err != nil {
+				return newError(WriteError, err.Error())
+			}
 
-    		if _, err := w.Write(data[cur:cur + nonRunCount]); err != nil {
-    			return newError(WriteError, err.Error())
-    		}
+			if _, err := w.Write(data[cur:cur + nonRunCount]); err != nil {
+				return newError(WriteError, err.Error())
+			}
 
-    		cur += nonRunCount
+			cur += nonRunCount
 		}
 
 		// write out next run if one was found
 		if runCount >= minRunLength {
-		   	buf[0] = byte(128 + runCount)
-		    buf[1] = data[begRun]
+			buf[0] = byte(128 + runCount)
+			buf[1] = data[begRun]
 
-		    if _, err := w.Write(buf); err != nil {
-    			return newError(WriteError, err.Error())
-    		}
+			if _, err := w.Write(buf); err != nil {
+				return newError(WriteError, err.Error())
+			}
 
-		    cur += runCount
+			cur += runCount
 		} 
-    }
+	}
 
 	return nil
 }
