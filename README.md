@@ -24,33 +24,25 @@ import (
 
 func main() {
 	fi, err := os.Open("example.hdr")
-
 	defer fi.Close()
-
 	if err != nil {
 		panic(err)
 	}
 
 	width, height, data, err := rgbe.Decode(fi)
-
 	if err != nil {
 		panic(err)
 	}
 
 	total := float32(width * height)
-
 	averageLuminance := float32(0)
 
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			o := (width * y + x) * 3
-
 			r, g, b := data[o + 0], data[o + 1], data[o + 2]
-
 			l := luminance(r, g, b)
-
 			averageLuminance += l / total
-
 			data[o + 0], data[o + 1], data[o + 2] = l, l, l
 		}
 	}
@@ -58,9 +50,7 @@ func main() {
 	fmt.Printf("RGBE image %d x %d size, average luminance is %v\n", width, height, averageLuminance)
 
 	fo, err := os.Create("bw.hdr")
-
 	defer fo.Close()
-
 	if err != nil {
 		panic(err)
 	}
