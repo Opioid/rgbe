@@ -23,11 +23,11 @@ func Encode(w io.Writer, width, height int, data []float32) error {
 	useRLE := true
 
 	if useRLE {
-		if err := writePixels(bw, width * height, data); err != nil {
+		if err := writePixels_RLE(bw, width, height, data); err != nil {
 			return err
 		}
 	} else {
-		if err := writePixels_RLE(bw, width, height, data); err != nil {
+		if err := writePixels(bw, width * height, data); err != nil {
 			return err
 		}
 	}
