@@ -23,16 +23,10 @@ import (
 )
 
 func main() {
-	fi, err := os.Open("example.hdr")
+	fi, _ := os.Open("output.hdr")
 	defer fi.Close()
-	if err != nil {
-		panic(err)
-	}
 
-	width, height, data, err := rgbe.Decode(fi)
-	if err != nil {
-		panic(err)
-	}
+	width, height, data, _ := rgbe.Decode(fi)
 
 	total := float32(width * height)
 	averageLuminance := float32(0)
@@ -47,17 +41,14 @@ func main() {
 		}
 	}
 
-	fmt.Printf("RGBE image %d x %d size, average luminance is %v\n", width, height, averageLuminance)
+	fmt.Printf(
+		"RGBE image %d x %d size, average luminance is %v\n", 
+		width, height, averageLuminance)
 
-	fo, err := os.Create("bw.hdr")
+	fo, _ := os.Create("bw.hdr")
 	defer fo.Close()
-	if err != nil {
-		panic(err)
-	}
 
-	if err := rgbe.Encode(fo, width, height, data); err != nil {
-		panic(err)
-	}
+	rgbe.Encode(fo, width, height, data)
 }
 
 func luminance(r, g, b float32) float32 {
